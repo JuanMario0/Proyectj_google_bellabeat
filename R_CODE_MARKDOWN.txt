@@ -1,0 +1,184 @@
+---
+title: "PROYECTO_BELLABEAT_GOOGLE"
+author: "Juan Mario Moreno Chaparro"
+date: "2023-01-15"
+output:
+  word_document: default
+  html_document: default
+---
+
+## Cargamos las librerias 
+Notes: las librerias siguientes se pueden instalar con "install.packages"
+
+```{r}
+library(ggplot2)
+library(tidyverse)
+library(rmarkdown)
+library(skimr)
+library(dplyr)
+library(janitor) #funciones para la limpieza de datos
+library("here")  #Este paquete facilita la consulta de los archivos
+library(readr)
+```
+
+
+## Datos para analizar 
+para poder cargar un documentos cvs usamos la siguiente función de R  
+
+
+```{r}
+dailyActivity_merged <- read_csv("C:/Users/moren/OneDrive/Escritorio/Fitabase Data 4.12.16-5.12.16/dailyActivity_merged.csv")
+View(dailyActivity_merged)
+
+
+Proyecto_LEFT_JOIN_VARIAS_TABLAS <- read_csv("C:/Users/moren/OneDrive/Escritorio/Fitabase Data 4.12.16-5.12.16/BIG_QUERY_CONSULTAS/Proyecto_LEFT_JOIN_VARIAS_TABLAS.csv")
+View(Proyecto_LEFT_JOIN_VARIAS_TABLAS)
+
+USUARIOS_LEFT_JOIN <- read_csv("C:/Users/moren/OneDrive/Escritorio/Fitabase Data 4.12.16-5.12.16/BIG_QUERY_CONSULTAS/USUARIOS_LEFT_JOIN.csv")
+View(USUARIOS_LEFT_JOIN)
+
+
+
+```
+## Reporte de datos 
+Usamos las siguientes funciones para que nos de un resumen de los datos
+que estamos usando.
+
+```{r}
+skim_without_charts(dailyActivity_merged) #resumen detallado de los datos
+
+glimpse(dailyActivity_merged) #resumen de las columnas
+
+head(dailyActivity_merged)
+
+skim_without_charts(USUARIOS_LEFT_JOIN) 
+
+glimpse(USUARIOS_LEFT_JOIN) 
+
+head(USUARIOS_LEFT_JOIN)
+
+```
+## Gráficas
+En primera tenemos una grafica de puntos que relaciona la distancia con las calorias
+
+```{r}
+
+ggplot(data = USUARIOS_LEFT_JOIN) + geom_point((mapping = 
+                                                  aes(x = Calories,
+                                                      y = TotalDistance, color=Usuario)))+
+  labs(title="Calorias quemadas por distancia",caption= "Datos de  
+       @MÖBIUS, FitBit Fitness Tracker Data")
+
+```
+### Después tenemos 
+Los pasos y el rastreador de ellos, esto para saber si el dispositivo concuerda con los pasos del usario
+```{r}
+ggplot(data = USUARIOS_LEFT_JOIN) + geom_smooth((mapping = 
+                                                   aes(x= TrackerDistance, 
+                                                       y=TotalSteps, color=Usuario)))+ 
+  geom_jitter((mapping =
+                 
+                 aes(x= TrackerDistance,  y=TotalSteps, color=Usuario)))+ 
+  labs(title="Total de pasos vs DIstancia del rastreador",caption= "Datos de  
+       @MÖBIUS, FitBit Fitness Tracker Data")
+```
+###Sedentarismo 
+Niveles de Sedentarismo por usario. 
+```{r}
+
+ggplot(data = USUARIOS_LEFT_JOIN)+
+  geom_bar(mapping=aes(x=SedentaryActiveDistance, fill=Usuario))+
+  facet_wrap(~Usuario)
+  
+```
+
+Tenemos usuarios con más actividad donde se ve que entre más distancia más actividad 
+
+```{r}
+
+ggplot(data = USUARIOS_LEFT_JOIN) + geom_point((mapping = 
+                                                    aes(x = VeryActiveDistance,
+                                                        y = TotalDistance, color=Usuario)))+
+  labs(title="Usuarios con más actividad por distancia",caption= "Datos de  
+       @MÖBIUS, FitBit Fitness Tracker Data")
+```
+
+Las horas de sueños vistas en minutos por usuario 
+
+```{r}
+ggplot(data = USUARIOS_LEFT_JOIN) + geom_area((mapping=
+                                                              aes(x = ActivityDate, 
+                                                                 y=TotalMinutesAsleep, color=Usuario)))  + 
+  facet_wrap(~Usuario)+
+  labs(title="Minutos dormido en cama",caption= "Datos de  
+       @MÖBIUS, FitBit Fitness Tracker Data")
+```
+
+##Estadísticas 
+
+Tenemos que las estadísticas de los datos nos da como resultado algunas respuestas sobre los usuarios. 
+Por ejemplo podemos ver que la media de cada usuario "Mean" de calorias y la de Pasos totales.  
+La desviación Estándar "sd" que nos la dispersión de los datos, tenemos en cuenta
+a los usuarios y sus disperción en pasos totales y calorias. 
+La correlación es la que tan relacionados están los datos, entre más cerca de 1 más se relacionan. 
+```{r}
+USUARIOS_LEFT_JOIN %>% 
+  group_by(Usuario) %>% 
+  summarise(mean(Calories), sd(Calories), mean(TotalSteps), sd(TotalSteps), 
+            cor(Calories, TotalSteps)) 
+```
+
+##Gráficas 
+
+Podemos ver en la siguiente grafica, como se ve los datos estadísticos de forma gráfica.
+
+```{r}
+ggplot(USUARIOS_LEFT_JOIN, aes(Calories, TotalSteps)) +
+  geom_point() + geom_smooth(method = lm, se=FALSE) 
+```
+Tenemos ahora las estadisticas de dos variables que por su nombre puede que tengan relación. 
+"Sendentarismo" y Poca "Avtividad"
+Pero el resultado es otro, su relación es negativa, esto quiere decir que mientras una variable crece la otra decrece. 
+
+```{r}
+USUARIOS_LEFT_JOIN %>% 
+  group_by(Usuario) %>%  
+  summarise(mean(SedentaryMinutes), sd(SedentaryMinutes), mean(LightlyActiveMinutes), 
+            sd(LightlyActiveMinutes), 
+            cor(SedentaryMinutes, LightlyActiveMinutes))
+```
+Gráfico 
+
+```{r}
+ggplot(USUARIOS_LEFT_JOIN, aes(SedentaryMinutes, LightlyActiveMinutes)) +
+  geom_point() + geom_smooth(method = lm, se=FALSE) 
+
+```
+Tenemos ahora la media de mucha distancia activa y Sedentarismo activo por Usuario. 
+
+```{r}
+USUARIOS_LEFT_JOIN %>% 
+  group_by(Usuario) %>% 
+  summarise(mean(VeryActiveDistance), mean(SedentaryActiveDistance))
+```
+
+Gráfico
+
+```{r}
+ggplot(USUARIOS_LEFT_JOIN, aes(VeryActiveDistance, SedentaryActiveDistance)) +
+  geom_area() + geom_smooth(method = lm, se=FALSE) 
+```
+
+#Conclusiones
+
+Como Conclusión la empresa bellabeat podria mejorar la calidad de sus productos, 
+con publicidad enfocada a correr, hacer ejercicio, etc. 
+La gráfica de calorias, indica que no muchos usarios no usan debidamente los productos para su cuidado. 
+
+A lo que lleva que el Sedentarismo sea más alto en los usuarios. 
+
+Veremos más a fondo las gráficas con Tableu para llegar a está conclusión. 
+
+
+Gracias! 
+Seguire mejorando. 
